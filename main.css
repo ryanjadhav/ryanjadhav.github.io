@@ -1,0 +1,116 @@
+body {
+	background: url("images/bg.png") repeat scroll 0 0 #EFEFEF;
+	font-family: 'Open Sans', Helvetica, san-serif;
+	font-size: 14px;
+	color: #fff;
+}
+
+::-moz-selection, ::selection {
+	color: inherit;
+	background: #FFC0CB;
+}
+
+h1 {
+	font-size: 60px;
+	font-variant: small-caps;
+	text-align: center;
+	text-shadow: 0 1px 0 #ccc,
+               0 2px 0 #c9c9c9,
+               0 3px 0 #bbb,
+               0 4px 0 #b9b9b9,
+               0 5px 0 #aaa,
+               0 6px 1px rgba(0,0,0,.1),
+               0 0 5px rgba(0,0,0,.1),
+               0 1px 3px rgba(0,0,0,.3),
+               0 3px 5px rgba(0,0,0,.2),
+               0 5px 10px rgba(0,0,0,.25),
+               0 10px 10px rgba(0,0,0,.2),
+               0 20px 20px rgba(0,0,0,.15);
+}
+
+a, a:visited {
+	text-decoration: none;
+	color: #71CB41;
+}
+
+a:hover {
+	border-bottom: 1px dotted #71CB41;
+}
+
+p {
+	margin: 5px 0;
+}
+
+ul li {
+	display: inline;
+	list-style-type: none;
+	margin-right: 5%;
+}
+
+ul li:last-child {
+	margin-right: 0;
+}
+
+#name {
+	margin-bottom: 25px;
+}
+
+.card {
+	opacity: 0;
+	-moz-opacity: 0;
+	filter:alpha(opacity=0);
+	position: relative;
+	background: rgb(0, 0, 0);
+	background: rgba(0, 0, 0, 0.3);
+	border-radius: 3px;
+	box-shadow: 0px 1px 2px rgba(0,0,0,0.5);
+	padding: 10px 35px;
+	margin: 5px 0;
+	text-align: center;
+	-webkit-transition: opacity 3s;
+	-moz-transition: opacity 3s;
+	-ms-transition: opacity 3s;
+	-o-transition: opacity 3s;
+	transition: opacity 3s;
+}
+
+#intro {
+	font-size: 18px;
+	line-height: 24px;
+}
+
+#contact {
+	font-size: 16px;
+	line-height: 24px;
+	text-align: center;
+}
+
+.onload {
+	opacity: 1;
+	-moz-opacity: 1;
+	filter:alpha(opacity=100);
+}
+
+@media all and (min-width: 760px){
+	#content {
+		width: 50%;
+		padding: 25px 10%;
+		margin: 0 15%;
+	}
+}
+
+@media all and (max-width: 760px){
+	#content {
+		padding: 25px 0;
+		margin: 0 3%;
+	}
+
+	#contact, #intro {
+		padding: 10px 5px;
+	}
+}
+
+@media screen and (max-width: 480px){
+	#contact, #intro {
+		font-size: 14px;
+}
