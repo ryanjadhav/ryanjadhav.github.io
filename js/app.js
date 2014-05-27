@@ -1,3 +1,5 @@
 $(document).ready(function(){
-	$('.card').addClass('onload');
+	setTimeout(function() {
+    $('.card').addClass('onload');
+  }, 100);
 });
