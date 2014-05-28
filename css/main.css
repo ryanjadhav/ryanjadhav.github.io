@@ -59,6 +59,8 @@ ul li:last-child {
 	opacity: 0;
 	-moz-opacity: 0;
 	filter:alpha(opacity=0);
+  font-family: Georgia serif;
+  font-style: italic;
 	position: relative;
 	background: rgb(0, 0, 0);
 	background: rgba(0, 0, 0, 0.3);
@@ -66,7 +68,7 @@ ul li:last-child {
   padding: 10px 35px;
 	margin: 10px auto;
 	text-align: center;
-  width: 80%;
+  width: 380px;
 	-webkit-transition: opacity 3s;
 	-moz-transition: opacity 3s;
 	-ms-transition: opacity 3s;
