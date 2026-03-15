@@ -1,114 +1,323 @@
+/* ─── Theme Variables ─────────────────────────────────────────── */
+:root {
+  --bg:          #0a0a0a;
+  --bg-card:     #141414;
+  --border:      rgba(255, 255, 255, 0.08);
+  --border-hover:rgba(255, 255, 255, 0.18);
+  --text:        #e4e4e7;
+  --text-muted:  #71717a;
+  --accent:      #00e5ff;
+  --accent-hover:#40edff;
+  --font-sans:   'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
+  --radius:      10px;
+  --max-w:       680px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:          #fafafa;
+    --bg-card:     #ffffff;
+    --border:      rgba(0, 0, 0, 0.08);
+    --border-hover:rgba(0, 0, 0, 0.18);
+    --text:        #18181b;
+    --text-muted:  #52525b;
+    --accent:      #0284c7;
+    --accent-hover:#0369a1;
+  }
+}
+
+/* ─── Base ────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-	background: #000;
-	font-family: 'Open Sans', Helvetica, san-serif;
-	font-size: 14px;
-	color: #fff;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-::-moz-selection, ::selection {
-	color: inherit;
-	background: #FFC0CB;
-}
-
-h1 {
-  text-align: center;
-	font-size: 60px;
-	font-variant: small-caps;
+::selection {
+  background: var(--accent);
+  color: #000;
 }
 
 a, a:visited {
-	text-decoration: none;
-	color: #1DF;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 a:hover {
-	color: #00aecc;
+  color: var(--accent-hover);
 }
 
-p {
-	margin: 5px 0;
+/* ─── Layout ──────────────────────────────────────────────────── */
+nav,
+main,
+footer {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
-ul li {
-	display: inline;
-	list-style-type: none;
-	margin-right: 5%;
+/* ─── Nav ─────────────────────────────────────────────────────── */
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 32px;
+  padding-bottom: 32px;
 }
 
-ul li:last-child {
-	margin-right: 0;
+.nav-logo {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: -0.02em;
 }
 
-.bg {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  opacity: 0.5;
-  background: url(../images/blue.jpg) no-repeat center center fixed;
-  -webkit-background-size: cover; /* For WebKit*/
-  -moz-background-size: cover;    /* Mozilla*/
-  -o-background-size: cover;      /* Opera*/
-  background-size: cover;         /* Generic*/
+.btn-resume {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-#name {
-  padding: 25px 0;
+.btn-resume:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
 }
 
-.card {
-	opacity: 0;
-	-moz-opacity: 0;
-	filter:alpha(opacity=0);
-  font-family: Georgia serif;
-  font-style: italic;
-	position: relative;
-	background: rgb(0, 0, 0);
-	background: rgba(0, 0, 0, 0.3);
-	border: 1px solid rgba(255,255,255,0.6);
-  padding: 10px 35px;
-	margin: 10px auto;
-	text-align: center;
-  width: 380px;
-	-webkit-transition: opacity 3s;
-	-moz-transition: opacity 3s;
-	-ms-transition: opacity 3s;
-	-o-transition: opacity 3s;
-	transition: opacity 3s;
+/* ─── Hero ────────────────────────────────────────────────────── */
+.hero {
+  padding: 48px 0 56px;
 }
 
-#intro {
-	font-size: 18px;
-	line-height: 24px;
+.greeting {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent);
+  margin-bottom: 8px;
 }
 
-#contact {
-	font-size: 24px;
-	line-height: 24px;
-	text-align: center;
+h1 {
+  font-size: clamp(40px, 8vw, 64px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 16px;
 }
 
-.onload {
-	opacity: 1;
-	-moz-opacity: 1;
-	filter:alpha(opacity=100);
+.tagline {
+  font-size: 18px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
 }
 
-@media all and (min-width: 760px){
-	#content {
-		width: 50%;
-		padding: 25px 10%;
-		margin: 0 15%;
-	}
+/* ─── Social Links ────────────────────────────────────────────── */
+.social-links {
+  display: flex;
+  gap: 20px;
+  align-items: center;
 }
 
-@media all and (max-width: 760px){
-	#content {
-		padding: 25px 0;
-		margin: 0 3%;
-	}
-
-	#contact, #intro {
-		padding: 10px 5px;
-	}
+.social-links a {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
+.social-links a:hover {
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+/* ─── Sections ────────────────────────────────────────────────── */
+main section {
+  margin-bottom: 52px;
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── About ───────────────────────────────────────────────────── */
+.about p {
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--text);
+}
+
+/* ─── Skills ──────────────────────────────────────────────────── */
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.skill-tags span {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.skill-tags span:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+/* ─── Highlight Cards ─────────────────────────────────────────── */
+.highlight-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.highlight-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.highlight-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.card-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.card-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(0, 229, 255, 0.08);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+@media (prefers-color-scheme: light) {
+  .card-tag {
+    background: rgba(2, 132, 199, 0.08);
+  }
+}
+
+.highlight-card p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.65;
+  margin-bottom: 12px;
+}
+
+.highlight-card p:last-child {
+  margin-bottom: 0;
+}
+
+.card-link {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ─── Footer ──────────────────────────────────────────────────── */
+footer {
+  padding-top: 32px;
+  padding-bottom: 40px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.footer-sep {
+  margin: 0 10px;
+}
+
+/* ─── Fade-in Animation ───────────────────────────────────────── */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main section,
+footer {
+  opacity: 0;
+}
+
+body.loaded main section,
+body.loaded footer {
+  animation: fadeUp 0.5s ease forwards;
+}
+
+body.loaded .hero          { animation-delay: 0.05s; }
+body.loaded .about         { animation-delay: 0.15s; }
+body.loaded .skills        { animation-delay: 0.25s; }
+body.loaded .highlights    { animation-delay: 0.35s; }
+body.loaded footer         { animation-delay: 0.45s; }
+
+/* ─── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 38px;
+  }
+
+  .tagline {
+    font-size: 16px;
+  }
+
+  .highlight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    padding: 32px 0 40px;
+  }
+
+  main section {
+    margin-bottom: 40px;
+  }
+}
