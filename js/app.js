@@ -1,5 +1,3 @@
-$(document).ready(function(){
-	setTimeout(function() {
-    $('.card').addClass('onload');
-  }, 100);
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.add('loaded');
 });
