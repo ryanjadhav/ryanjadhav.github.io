@@ -171,6 +171,58 @@ main section {
   color: var(--text);
 }
 
+/* ─── Experience ──────────────────────────────────────────────── */
+.experience-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.exp-item {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.exp-item:first-child {
+  padding-top: 0;
+}
+
+.exp-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.exp-date {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.exp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exp-company {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.exp-role {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 /* ─── Skills ──────────────────────────────────────────────────── */
 .skill-tags {
   display: flex;
@@ -295,9 +347,10 @@ body.loaded footer {
 
 body.loaded .hero          { animation-delay: 0.05s; }
 body.loaded .about         { animation-delay: 0.15s; }
-body.loaded .skills        { animation-delay: 0.25s; }
-body.loaded .highlights    { animation-delay: 0.35s; }
-body.loaded footer         { animation-delay: 0.45s; }
+body.loaded .experience    { animation-delay: 0.25s; }
+body.loaded .skills        { animation-delay: 0.35s; }
+body.loaded .highlights    { animation-delay: 0.45s; }
+body.loaded footer         { animation-delay: 0.55s; }
 
 /* ─── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
@@ -319,5 +372,14 @@ body.loaded footer         { animation-delay: 0.45s; }
 
   main section {
     margin-bottom: 40px;
+  }
+
+  .exp-item {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .exp-date {
+    min-width: unset;
   }
 }
