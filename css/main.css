@@ -90,7 +90,6 @@ nav {
   padding-bottom: 20px;
 }
 
-.nav-logo-short { display: none; }
 
 .nav-logo {
   font-family: var(--font-mono);
@@ -391,8 +390,8 @@ body.loaded footer         { animation-delay: 0.55s; }
 
 /* ─── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .nav-logo-full { display: none; }
-  .nav-logo-short { display: inline; }
+  .prompt-name-mid { display: none; }
+  .prompt-sep { display: none; }
   .nav-logo { font-size: 14px; }
   .btn-resume { font-size: 12px; padding: 5px 10px; }
 
