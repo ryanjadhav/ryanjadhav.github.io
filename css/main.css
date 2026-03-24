@@ -424,3 +424,130 @@ body.loaded footer         { animation-delay: 0.55s; }
     min-width: unset;
   }
 }
+
+/* ─── Easter Egg: Nav cursor typing states ────────────────────── */
+.prompt-cursor.typing {
+  animation: none;
+  opacity: 1;
+}
+
+.prompt-cursor.error {
+  color: #ff4d4d;
+  animation: none;
+}
+
+/* ─── Easter Egg: Game Overlay ────────────────────────────────── */
+.game-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(var(--bg-rgb), 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.game-overlay--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.game-window {
+  position: relative;
+  width: min(800px, 96vw);
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 0 48px rgba(0, 229, 255, 0.12);
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: light) {
+  .game-window {
+    box-shadow: 0 0 48px rgba(2, 132, 199, 0.12);
+  }
+}
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+  user-select: none;
+}
+
+.game-close {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.game-close:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+.game-canvas {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 1.8vw, 14px);
+  line-height: 1.5;
+  color: var(--text);
+  padding: 20px 24px;
+  white-space: pre;
+  overflow: hidden;
+  user-select: none;
+  tab-size: 1;
+}
+
+.game-over-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(var(--bg-rgb), 0.88);
+  font-family: var(--font-mono);
+  color: var(--text);
+  transition: opacity 0.2s ease;
+}
+
+.game-over--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.game-over-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.18em;
+}
+
+.game-over-score {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.game-over-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
