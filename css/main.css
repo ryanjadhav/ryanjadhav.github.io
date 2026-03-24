@@ -86,9 +86,17 @@ nav {
   letter-spacing: -0.02em;
 }
 
-.prompt-symbol {
+.prompt-user {
   color: var(--accent);
-  margin-right: 2px;
+}
+
+.prompt-sep {
+  color: var(--text-muted);
+}
+
+.prompt-symbol {
+  color: var(--text-muted);
+  margin-left: 2px;
 }
 
 .prompt-cursor {
