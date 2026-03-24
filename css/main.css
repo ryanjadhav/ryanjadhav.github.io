@@ -90,6 +90,8 @@ nav {
   padding-bottom: 20px;
 }
 
+.nav-logo-short { display: none; }
+
 .nav-logo {
   font-family: var(--font-mono);
   font-size: 18px;
@@ -389,6 +391,11 @@ body.loaded footer         { animation-delay: 0.55s; }
 
 /* ─── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  .nav-logo-full { display: none; }
+  .nav-logo-short { display: inline; }
+  .nav-logo { font-size: 14px; }
+  .btn-resume { font-size: 12px; padding: 5px 10px; }
+
   h1 {
     font-size: 38px;
   }
