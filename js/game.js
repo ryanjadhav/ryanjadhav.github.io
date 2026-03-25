@@ -308,8 +308,8 @@
   }
 
   function collides() {
-    // Player hitbox: center column only (PLAYER_COL+1) for leniency
-    var pCol = PLAYER_COL + 1;
+    // Player hitbox: center column only (PLAYER_COL+2) for leniency
+    var pCol = PLAYER_COL + 2;
     var pTop, pBot;
     if (player.ducking) {
       // Duck sprite renders at GROUND_ROW (1 row)
@@ -325,8 +325,8 @@
       var ox = Math.floor(o.x);
       var oTop = o.rowOffset;
       var oBot = o.rowOffset + o.sprite.length - 1;
-      // Horizontal: player center within obstacle's 3 chars
-      if (pCol >= ox && pCol <= ox + 2 && pTop <= oBot && pBot >= oTop) return true;
+      // Horizontal: player center within obstacle's 5 chars
+      if (pCol >= ox && pCol <= ox + OBS_W - 1 && pTop <= oBot && pBot >= oTop) return true;
     }
     return false;
   }
