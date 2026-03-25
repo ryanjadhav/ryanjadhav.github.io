@@ -53,6 +53,28 @@
   // ── DOM refs (set on first openGame) ──────────────────────────
   var overlay, canvas, gameOverScreen, gameOverScoreEl;
 
+  // ── Touch support ──────────────────────────────────────────────
+  var isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  if (isTouchDevice) document.documentElement.classList.add('touch-device');
+
+  function handleTouch(e) {
+    e.preventDefault();
+    if (gameOverFlag) { restartGame(); return; }
+    if (!gameActive) return;
+    var touch = e.touches[0];
+    var rect  = overlay.getBoundingClientRect();
+    var relY  = (touch.clientY - rect.top) / rect.height;
+    if (relY > 0.65) {
+      if (player.y >= STANDING_Y - 0.5) player.ducking = true;
+    } else {
+      jump();
+    }
+  }
+
+  function handleTouchEnd() {
+    player.ducking = false;
+  }
+
   // ════════════════════════════════════════════════════════════
   // KEYBOARD BUFFER — secret word detection + nav feedback
   // ════════════════════════════════════════════════════════════
@@ -169,8 +191,9 @@
           '<div id="game-over-screen" class="game-over-screen game-over--hidden">' +
             '<p class="game-over-title">GAME  OVER</p>' +
             '<p class="game-over-score" id="game-over-score"></p>' +
-            '<p class="game-over-hint">[R] restart &nbsp;&nbsp; [ESC] exit</p>' +
+            '<p class="game-over-hint">[R] / tap &nbsp;restart &nbsp;&nbsp; [ESC] exit</p>' +
           '</div>' +
+          '<div id="game-touch-hint" class="game-touch-hint">tap to jump &nbsp;·&nbsp; hold bottom to duck</div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(wrap.firstElementChild);
@@ -186,6 +209,10 @@
     if (!overlay) buildOverlay();
     overlay.classList.remove('game-overlay--hidden');
     document.addEventListener('keyup', handleKeyUp);
+    if (isTouchDevice) {
+      overlay.addEventListener('touchstart', handleTouch, { passive: false });
+      overlay.addEventListener('touchend', handleTouchEnd);
+    }
     startGame();
   }
 
@@ -193,7 +220,11 @@
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     gameActive   = false;
     gameOverFlag = false;
-    if (overlay) overlay.classList.add('game-overlay--hidden');
+    if (overlay) {
+      overlay.classList.add('game-overlay--hidden');
+      overlay.removeEventListener('touchstart', handleTouch);
+      overlay.removeEventListener('touchend', handleTouchEnd);
+    }
     document.removeEventListener('keyup', handleKeyUp);
     clearBuffer();
   }
@@ -400,6 +431,17 @@
   // ── Bootstrap ─────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', handleGlobalKey);
+
+    // Mobile: tap the nav logo to open the game
+    if (isTouchDevice) {
+      var logo = document.querySelector('.nav-logo');
+      if (logo) {
+        logo.style.cursor = 'pointer';
+        logo.addEventListener('click', function () {
+          if (!gameActive && !gameOverFlag) openGame();
+        });
+      }
+    }
   });
 
 }());

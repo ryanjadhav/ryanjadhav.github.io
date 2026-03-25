@@ -124,3 +124,19 @@
   color: var(--text-muted);
   margin-top: 10px;
 }
+
+/* ─── Touch hint bar (shown only on touch devices) ─────────────── */
+.touch-device .game-touch-hint {
+  display: block;
+}
+
+.game-touch-hint {
+  display: none;
+  text-align: center;
+  padding: 8px 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  user-select: none;
+}
