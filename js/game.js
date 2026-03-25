@@ -275,7 +275,7 @@
 
     // Score counter + run animation
     score++;
-    if (++player.frameTick >= 8) { player.frameTick = 0; player.frame ^= 1; }
+    if (++player.frameTick >= 4) { player.frameTick = 0; player.frame = (player.frame + 1) % 4; }
   }
 
   function jump() {
@@ -373,7 +373,10 @@
     var sprite, py;
     if (player.ducking) {
       sprite = PLAYER_DUCK_SPR;
-      py     = GROUND_ROW;          // single row at ground level
+      py     = GROUND_ROW;
+    } else if (player.y < STANDING_Y - 0.5) {
+      sprite = PLAYER_JUMP_SPR;
+      py     = Math.floor(player.y);
     } else {
       sprite = PLAYER_RUN[player.frame];
       py     = Math.floor(player.y);
