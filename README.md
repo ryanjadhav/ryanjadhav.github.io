@@ -1,17 +1,7 @@
 # ryanjadhav.github.io
 
-Personal portfolio website for [Ryan Jadhav](https://ryanjadhav.com), Engineering Manager at Meta.
-
+Personal website for [Ryan Jadhav](https://ryanjadhav.com)
 ---
-
-## Preview
-
-| Light | Dark |
-|-------|------|
-| ![Light mode](screenshots/preview-light.png) | ![Dark mode](screenshots/preview-dark.png) |
-
----
-
 
 ## Overview
 
