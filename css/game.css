@@ -75,6 +75,13 @@
   border-color: var(--border-hover);
 }
 
+.touch-device .game-close {
+  font-size: 13px;
+  padding: 6px 16px;
+  min-height: 36px;
+  min-width: 56px;
+}
+
 .game-canvas {
   display: block;
   font-family: var(--font-mono);
