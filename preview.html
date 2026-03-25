@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <title>Game Preview</title>
+  <style>
+    /* ─── Reset ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─── Theme ─────────────────────────────────────── */
+    :root {
+      --bg:          #0a0a0a;
+      --bg-rgb:      10, 10, 10;
+      --bg-card:     #141414;
+      --border:      rgba(255, 255, 255, 0.08);
+      --border-hover:rgba(255, 255, 255, 0.18);
+      --text:        #e4e4e7;
+      --text-muted:  #71717a;
+      --accent:      #00e5ff;
+      --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
+      --radius:      10px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:          #fafafa;
+        --bg-rgb:      250, 250, 250;
+        --bg-card:     #ffffff;
+        --border:      rgba(0, 0, 0, 0.08);
+        --border-hover:rgba(0, 0, 0, 0.18);
+        --text:        #18181b;
+        --text-muted:  #52525b;
+        --accent:      #0284c7;
+      }
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    /* ─── Game Overlay ───────────────────────────────── */
+    .game-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(var(--bg-rgb), 0.92);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .game-window {
+      position: relative;
+      width: min(800px, 96vw);
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      box-shadow: 0 0 48px rgba(0, 229, 255, 0.12);
+      overflow: hidden;
+    }
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent);
+      user-select: none;
+    }
+    .game-close {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .game-close:hover { color: var(--text); border-color: var(--border-hover); }
+    .game-canvas {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: clamp(11px, 1.8vw, 14px);
+      line-height: 1.5;
+      color: var(--text);
+      padding: 20px 24px;
+      white-space: pre;
+      overflow: hidden;
+      user-select: none;
+      tab-size: 1;
+    }
+    .game-over-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(var(--bg-rgb), 0.88);
+      font-family: var(--font-mono);
+      color: var(--text);
+      transition: opacity 0.2s ease;
+    }
+    .game-over--hidden { opacity: 0; pointer-events: none; }
+    .game-over-title  { font-size: 22px; font-weight: 600; color: var(--accent); letter-spacing: 0.18em; }
+    .game-over-score  { font-size: 15px; color: var(--text-muted); }
+    .game-over-hint   { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+    /* hint bar */
+    .preview-hint {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 16px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 1001;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Game overlay (visible by default in preview) -->
+  <div id="game-overlay" class="game-overlay" role="dialog" aria-modal="true" aria-label="ASCII Runner Game">
+    <div class="game-window">
+      <div class="game-header">
+        <span>ryanjadhav@home:~$ ./play</span>
+        <button class="game-close" id="game-close-btn" aria-label="Close game">ESC</button>
+      </div>
+      <pre id="game-canvas" class="game-canvas"></pre>
+      <div id="game-over-screen" class="game-over-screen game-over--hidden">
+        <p class="game-over-title">GAME  OVER</p>
+        <p class="game-over-score" id="game-over-score"></p>
+        <p class="game-over-hint">[R] restart &nbsp;&nbsp; [ESC] exit</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-hint">↑ / Space / W &nbsp;jump &nbsp;&nbsp; ↓ / S &nbsp;duck &nbsp;&nbsp; ESC &nbsp;close</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var COLS           = 60;
+  var ROWS           = 10;
+  var GROUND_ROW     = ROWS - 1;
+  var PLAYER_COL     = 5;
+  var PLAYER_H_STAND = 3;
+  var STANDING_Y     = GROUND_ROW - PLAYER_H_STAND + 1;
+  var JUMP_VEL       = -0.52;
+  var GRAVITY        = 0.026;
+  var INITIAL_SPEED  = 0.28;
+  var SPEED_RAMP     = 0.000012;
+  var TICK_MS        = 1000 / 60;
+  var MIN_OBS_GAP    = 20;
+
+  var PLAYER_RUN = [
+    [' o ', '/|\\', '/ \\'],
+    [' o ', '\\|/', ' |\\'],
+  ];
+  var PLAYER_DUCK_SPR = ['_o_'];
+  var OBS_TALL  = [' | ', '_|_', '|||'];
+  var OBS_SHORT = ['_|_', '|||'];
+  var OBS_BIRD  = ['>=>'];
+
+  var gameActive   = false;
+  var gameOverFlag = false;
+  var rafId        = null;
+  var lastTime     = 0;
+  var acc          = 0;
+  var player       = {};
+  var obstacles    = [];
+  var score        = 0;
+  var speed        = INITIAL_SPEED;
+
+  var canvas          = document.getElementById('game-canvas');
+  var gameOverScreen  = document.getElementById('game-over-screen');
+  var gameOverScoreEl = document.getElementById('game-over-score');
+  var closeBtn        = document.getElementById('game-close-btn');
+
+  closeBtn.addEventListener('click', closeGame);
+  document.addEventListener('keydown', handleGameKey);
+  document.addEventListener('keyup', handleKeyUp);
+
+  function handleGameKey(e) {
+    if (['ArrowUp', 'ArrowDown', ' '].indexOf(e.key) !== -1) e.preventDefault();
+    if (e.key === 'Escape') { closeGame(); return; }
+    if (gameOverFlag) {
+      if (e.key === 'r' || e.key === 'R') startGame();
+      return;
+    }
+    if (!gameActive) return;
+    if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') jump();
+    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+      if (player.y >= STANDING_Y - 0.5) player.ducking = true;
+    }
+  }
+  function handleKeyUp(e) {
+    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') player.ducking = false;
+  }
+  function closeGame() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    gameActive = false; gameOverFlag = false;
+    document.getElementById('game-overlay').style.display = 'none';
+  }
+
+  function startGame() {
+    player = { y: STANDING_Y, vy: 0, ducking: false, frame: 0, frameTick: 0 };
+    obstacles = []; score = 0; speed = INITIAL_SPEED;
+    gameActive = true; gameOverFlag = false;
+    gameOverScreen.classList.add('game-over--hidden');
+    lastTime = 0; acc = 0;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function endGame() {
+    gameActive = false; gameOverFlag = true;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    gameOverScoreEl.textContent = 'score: ' + fmtScore(score);
+    gameOverScreen.classList.remove('game-over--hidden');
+  }
+
+  function loop(ts) {
+    if (!gameActive) return;
+    if (!lastTime) lastTime = ts;
+    var dt = Math.min(ts - lastTime, 100);
+    lastTime = ts; acc += dt;
+    while (acc >= TICK_MS) { tick(); acc -= TICK_MS; if (!gameActive) break; }
+    if (gameActive) { render(); rafId = requestAnimationFrame(loop); }
+  }
+
+  function tick() {
+    player.vy += GRAVITY; player.y += player.vy;
+    if (player.y >= STANDING_Y) { player.y = STANDING_Y; player.vy = 0; }
+    speed += SPEED_RAMP;
+    for (var i = 0; i < obstacles.length; i++) obstacles[i].x -= speed;
+    obstacles = obstacles.filter(function (o) { return o.x + 3 > 0; });
+    spawnMaybe();
+    if (collides()) { endGame(); return; }
+    score++;
+    if (++player.frameTick >= 8) { player.frameTick = 0; player.frame ^= 1; }
+  }
+
+  function jump() {
+    if (player.vy === 0 && player.y >= STANDING_Y - 0.5) {
+      player.vy = JUMP_VEL; player.ducking = false;
+    }
+  }
+
+  function spawnMaybe() {
+    if (obstacles.length > 0 && obstacles[obstacles.length - 1].x > COLS - MIN_OBS_GAP) return;
+    var rate = Math.min(0.012 + score * 0.000008, 0.025);
+    if (Math.random() > rate) return;
+    var types = score > 300
+      ? [OBS_TALL, OBS_TALL, OBS_SHORT, OBS_BIRD]
+      : [OBS_TALL, OBS_TALL, OBS_SHORT];
+    var spr = types[Math.floor(Math.random() * types.length)];
+    var isBird = spr === OBS_BIRD;
+    obstacles.push({ sprite: spr, x: COLS, rowOffset: isBird ? STANDING_Y : GROUND_ROW - spr.length + 1 });
+  }
+
+  function collides() {
+    var pCol = PLAYER_COL + 1, pTop, pBot;
+    if (player.ducking) { pTop = GROUND_ROW; pBot = GROUND_ROW; }
+    else { pTop = Math.floor(player.y); pBot = pTop + PLAYER_H_STAND - 1; }
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i], ox = Math.floor(o.x);
+      var oTop = o.rowOffset, oBot = o.rowOffset + o.sprite.length - 1;
+      if (pCol >= ox && pCol <= ox + 2 && pTop <= oBot && pBot >= oTop) return true;
+    }
+    return false;
+  }
+
+  function render() {
+    var g = [];
+    for (var r = 0; r < ROWS; r++) {
+      var row = [];
+      for (var c = 0; c < COLS; c++) row.push(' ');
+      g.push(row);
+    }
+    for (var c = 0; c < COLS; c++) g[GROUND_ROW][c] = '\u2500';
+    var sc = 'SCORE: ' + fmtScore(score);
+    for (var i = 0; i < sc.length; i++) {
+      var col = COLS - sc.length - 1 + i;
+      if (col >= 0) g[0][col] = sc[i];
+    }
+    for (var oi = 0; oi < obstacles.length; oi++) {
+      var o = obstacles[oi], ox = Math.floor(o.x);
+      for (var sr = 0; sr < o.sprite.length; sr++) {
+        var row = o.rowOffset + sr;
+        if (row < 0 || row >= ROWS) continue;
+        var line = o.sprite[sr];
+        for (var sc2 = 0; sc2 < line.length; sc2++) {
+          var col2 = ox + sc2;
+          if (col2 >= 0 && col2 < COLS) g[row][col2] = line[sc2];
+        }
+      }
+    }
+    var sprite, py;
+    if (player.ducking) { sprite = PLAYER_DUCK_SPR; py = GROUND_ROW; }
+    else { sprite = PLAYER_RUN[player.frame]; py = Math.floor(player.y); }
+    for (var pr = 0; pr < sprite.length; pr++) {
+      var prow = py + pr;
+      if (prow < 0 || prow >= ROWS) continue;
+      var pline = sprite[pr];
+      for (var pc = 0; pc < pline.length; pc++) {
+        var pcol = PLAYER_COL + pc;
+        if (pcol < COLS) g[prow][pcol] = pline[pc];
+      }
+    }
+    canvas.textContent = g.map(function (row) { return row.join(''); }).join('\n');
+  }
+
+  function fmtScore(n) { return String(n).padStart(5, '0'); }
+
+  // Auto-start on load
+  startGame();
+}());
+</script>
+</body>
+</html>
