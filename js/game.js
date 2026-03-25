@@ -10,9 +10,9 @@
   var PLAYER_H_STAND = 5;
   // Standing ground: player.y when feet touch ground (top of 5-row sprite at row 5)
   var STANDING_Y     = GROUND_ROW - PLAYER_H_STAND + 1; // 5
-  var JUMP_VEL       = -0.52;
-  var GRAVITY        = 0.026;
-  var INITIAL_SPEED  = 0.28;
+  var JUMP_VEL       = -0.62;
+  var GRAVITY        = 0.022;
+  var INITIAL_SPEED  = 0.38;
   var SPEED_RAMP     = 0.000012;
   var TICK_MS        = 1000 / 60;
   var BUFFER_MS      = 2000;
