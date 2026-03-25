@@ -7,30 +7,35 @@
   var ROWS           = 10;
   var GROUND_ROW     = ROWS - 1;             // 9
   var PLAYER_COL     = 5;
-  var PLAYER_H_STAND = 3;
-  // Standing ground: player.y when feet touch ground (top of 3-row sprite at row 7)
-  var STANDING_Y     = GROUND_ROW - PLAYER_H_STAND + 1; // 7
+  var PLAYER_H_STAND = 5;
+  // Standing ground: player.y when feet touch ground (top of 5-row sprite at row 5)
+  var STANDING_Y     = GROUND_ROW - PLAYER_H_STAND + 1; // 5
   var JUMP_VEL       = -0.52;
   var GRAVITY        = 0.026;
   var INITIAL_SPEED  = 0.28;
   var SPEED_RAMP     = 0.000012;
   var TICK_MS        = 1000 / 60;
   var BUFFER_MS      = 2000;
-  var MIN_OBS_GAP    = 20; // min chars from right edge before next spawn
+  var MIN_OBS_GAP    = 22; // wider obstacles (5 chars): effective gap = MIN_OBS_GAP - OBS_W = 17
+  var OBS_W          = 5;  // obstacle width in chars (was hardcoded 3)
 
   // ── Sprites ───────────────────────────────────────────────────
-  // Player running: 2 frames, 3 rows tall, 3 chars wide
+  // Player running: 4 frames, 5 rows tall, 5 chars wide
   var PLAYER_RUN = [
-    [' o ', '/|\\', '/ \\'],
-    [' o ', '\\|/', ' |\\'],
+    ['  o', ' /|\\', '  |', ' /|', '/   '],
+    ['  o', ' /|\\', '  |', '  |\\', '   \\'],
+    ['  o', ' \\|/', '  |', ' \\|', '  \\ '],
+    ['  o', ' \\|/', '  |', '  |/', '  / '],
   ];
+  // Player airborne: arms raised, 5 rows (blank 5th row keeps hitbox = PLAYER_H_STAND)
+  var PLAYER_JUMP_SPR = ['\\o/', '/|\\', ' |', '/ \\', '   '];
   // Player ducking: 1 row (renders at ground level)
-  var PLAYER_DUCK_SPR = ['_o_'];
+  var PLAYER_DUCK_SPR = ['_\\o/_'];
 
-  // Obstacles (3 chars wide)
-  var OBS_TALL  = [' | ', '_|_', '|||'];   // 3 rows, rows 7-9
-  var OBS_SHORT = ['_|_', '|||'];           // 2 rows, rows 8-9
-  var OBS_BIRD  = ['>=>'];                  // 1 row, row 7 (must duck or jump high)
+  // Obstacles (5 chars wide)
+  var OBS_TALL  = ['=====', '|===|', '|| ||']; // 3 rows, rows 7-9
+  var OBS_SHORT = ['_|||_', '|||||'];           // 2 rows, rows 8-9
+  var OBS_BIRD  = ['>-==>'];                    // 1 row, row 5 (player head height)
 
   // ── State ─────────────────────────────────────────────────────
   var inputBuffer  = '';
@@ -260,7 +265,7 @@
 
     // Advance & cull obstacles
     for (var i = 0; i < obstacles.length; i++) obstacles[i].x -= speed;
-    obstacles = obstacles.filter(function (o) { return o.x + 3 > 0; });
+    obstacles = obstacles.filter(function (o) { return o.x + OBS_W > 0; });
 
     // Spawn
     spawnMaybe();
