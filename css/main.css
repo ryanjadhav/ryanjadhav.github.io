@@ -167,7 +167,7 @@ h1 {
 /* ─── Social Links ────────────────────────────────────────────── */
 .social-links {
   display: flex;
-  gap: 20px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -175,12 +175,22 @@ h1 {
   color: var(--text-muted);
   display: flex;
   align-items: center;
-  transition: color 0.15s ease, transform 0.15s ease;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .social-links a:hover {
   color: var(--accent);
-  transform: translateY(-2px);
+  border-color: var(--border-hover);
+}
+
+.link-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
 }
 
 /* ─── Sections ────────────────────────────────────────────────── */
