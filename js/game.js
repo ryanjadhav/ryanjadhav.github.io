@@ -2,40 +2,35 @@
   'use strict';
 
   // ── Constants ─────────────────────────────────────────────────
-  var SECRET_WORD    = 'play';
-  var COLS           = 60;
-  var ROWS           = 10;
-  var GROUND_ROW     = ROWS - 1;             // 9
-  var PLAYER_COL     = 5;
-  var PLAYER_H_STAND = 5;
-  // Standing ground: player.y when feet touch ground (top of 5-row sprite at row 5)
-  var STANDING_Y     = GROUND_ROW - PLAYER_H_STAND + 1; // 5
-  var JUMP_VEL       = -0.62;
-  var GRAVITY        = 0.022;
-  var INITIAL_SPEED  = 0.38;
-  var SPEED_RAMP     = 0.000012;
-  var TICK_MS        = 1000 / 60;
-  var BUFFER_MS      = 2000;
-  var MIN_OBS_GAP    = 22; // wider obstacles (5 chars): effective gap = MIN_OBS_GAP - OBS_W = 17
-  var OBS_W          = 5;  // obstacle width in chars (was hardcoded 3)
+  var SECRET_WORD = 'play';
+  var BUFFER_MS   = 2000;
 
-  // ── Sprites ───────────────────────────────────────────────────
-  // Player running: 4 frames, 5 rows tall, 5 chars wide
-  var PLAYER_RUN = [
-    ['  o', ' /|\\', '  |', ' /|', '/   '],
-    ['  o', ' /|\\', '  |', '  |\\', '   \\'],
-    ['  o', ' \\|/', '  |', ' \\|', '  \\ '],
-    ['  o', ' \\|/', '  |', '  |/', '  / '],
+  // Board geometry
+  var COLS = 10;
+  var ROWS = 20;
+  var CELL = 26;   // px per cell
+  var SIDE = 96;   // sidebar px
+  var BW   = COLS * CELL;  // 260
+  var BH   = ROWS * CELL;  // 520
+  var CW   = BW + SIDE;    // 356
+  var CH   = BH;            // 520
+
+  // Canvas colours (always dark — it's a game)
+  var C_BG    = '#0f0f0f';
+  var C_GRID  = 'rgba(255,255,255,0.04)';
+  var C_TEXT  = '#e4e4e7';
+  var C_MUTED = '#52525b';
+
+  // Tetrominoes: shape + fill colour
+  var PIECES = [
+    { s: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], c: '#00e5ff' }, // I
+    { s: [[1,1],[1,1]],                              c: '#ffd700' }, // O
+    { s: [[0,1,0],[1,1,1],[0,0,0]],                 c: '#b44be1' }, // T
+    { s: [[0,1,1],[1,1,0],[0,0,0]],                 c: '#4caf50' }, // S
+    { s: [[1,1,0],[0,1,1],[0,0,0]],                 c: '#ff4444' }, // Z
+    { s: [[1,0,0],[1,1,1],[0,0,0]],                 c: '#4488ff' }, // J
+    { s: [[0,0,1],[1,1,1],[0,0,0]],                 c: '#ff9800' }, // L
   ];
-  // Player airborne: arms raised, 5 rows (blank 5th row keeps hitbox = PLAYER_H_STAND)
-  var PLAYER_JUMP_SPR = ['\\o/', '/|\\', ' |', '/ \\', '   '];
-  // Player ducking: 1 row (renders at ground level)
-  var PLAYER_DUCK_SPR = ['_\\o/_'];
-
-  // Obstacles (5 chars wide)
-  var OBS_TALL  = ['=====', '|===|', '|| ||']; // 3 rows, rows 7-9
-  var OBS_SHORT = ['_|||_', '|||||'];           // 2 rows, rows 8-9
-  var OBS_BIRD  = ['>-==>'];                    // 1 row, row 5 (player head height)
 
   // ── State ─────────────────────────────────────────────────────
   var inputBuffer  = '';
@@ -43,37 +38,15 @@
   var gameActive   = false;
   var gameOverFlag = false;
   var rafId        = null;
-  var lastTime     = 0;
-  var acc          = 0;
-  var player       = {};
-  var obstacles    = [];
-  var score        = 0;
-  var speed        = INITIAL_SPEED;
+  var board, cur, nxt, score, linesCleared, level, lastDrop, dropInterval;
 
-  // ── DOM refs (set on first openGame) ──────────────────────────
-  var overlay, canvas, gameOverScreen, gameOverScoreEl;
+  // ── DOM refs ──────────────────────────────────────────────────
+  var overlay, gameWindow, gameCanvas, ctx, gameOverScreen, gameOverScoreEl;
 
-  // ── Touch support ──────────────────────────────────────────────
+  // ── Touch support ─────────────────────────────────────────────
   var isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
   if (isTouchDevice) document.documentElement.classList.add('touch-device');
-
-  function handleTouch(e) {
-    e.preventDefault();
-    if (gameOverFlag) { restartGame(); return; }
-    if (!gameActive) return;
-    var touch = e.touches[0];
-    var rect  = overlay.getBoundingClientRect();
-    var relY  = (touch.clientY - rect.top) / rect.height;
-    if (relY > 0.65) {
-      if (player.y >= STANDING_Y - 0.5) player.ducking = true;
-    } else {
-      jump();
-    }
-  }
-
-  function handleTouchEnd() {
-    player.ducking = false;
-  }
+  var touchX0, touchY0;
 
   // ════════════════════════════════════════════════════════════
   // KEYBOARD BUFFER — secret word detection + nav feedback
@@ -84,39 +57,21 @@
     var tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
 
-    if (gameActive || gameOverFlag) {
-      handleGameKey(e);
-      return;
-    }
+    if (gameActive || gameOverFlag) { handleGameKey(e); return; }
 
     if (e.key === 'Escape')    { clearBuffer(); return; }
     if (e.key === 'Backspace') {
       inputBuffer = inputBuffer.slice(0, -1);
-      resetTimer();
-      updateNavCursor(inputBuffer);
-      return;
+      resetTimer(); updateNavCursor(inputBuffer); return;
     }
     if (e.key.length !== 1) return;
 
-    var ch   = e.key.toLowerCase();
-    var next = inputBuffer + ch;
+    var ch  = e.key.toLowerCase();
+    var buf = inputBuffer + ch;
 
-    if (next === SECRET_WORD) {
-      clearBuffer();
-      openGame();
-      return;
-    }
-
-    if (SECRET_WORD.startsWith(next)) {
-      inputBuffer = next;
-      resetTimer();
-      updateNavCursor(inputBuffer);
-    } else {
-      // Bad prefix — show error state then clear
-      inputBuffer = next;
-      updateNavCursor(inputBuffer);
-      flashError();
-    }
+    if (buf === SECRET_WORD)          { clearBuffer(); openGame(); return; }
+    if (SECRET_WORD.startsWith(buf))  { inputBuffer = buf; resetTimer(); updateNavCursor(buf); }
+    else                              { inputBuffer = buf; updateNavCursor(buf); flashError(); }
   }
 
   function resetTimer() {
@@ -134,13 +89,8 @@
     var el = document.getElementById('prompt-cursor');
     if (!el) return;
     el.classList.remove('error');
-    if (buf.length) {
-      el.textContent = buf + '_';
-      el.classList.add('typing');
-    } else {
-      el.textContent = '_';
-      el.classList.remove('typing');
-    }
+    if (buf.length) { el.textContent = buf + '_'; el.classList.add('typing'); }
+    else            { el.textContent = '_'; el.classList.remove('typing'); }
   }
 
   function flashError() {
@@ -155,22 +105,39 @@
   // ════════════════════════════════════════════════════════════
 
   function handleGameKey(e) {
-    if (['ArrowUp', 'ArrowDown', ' '].indexOf(e.key) !== -1) e.preventDefault();
     if (e.key === 'Escape') { closeGame(); return; }
-    if (gameOverFlag) {
-      if (e.key === 'r' || e.key === 'R') restartGame();
-      return;
-    }
+    if (gameOverFlag) { if (e.key === 'r' || e.key === 'R') startGame(); return; }
     if (!gameActive) return;
-    if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') jump();
-    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
-      // Duck only on ground
-      if (player.y >= STANDING_Y - 0.5) player.ducking = true;
+    switch (e.key) {
+      case 'ArrowLeft':  case 'a': case 'A': e.preventDefault(); shift(-1);     break;
+      case 'ArrowRight': case 'd': case 'D': e.preventDefault(); shift(1);      break;
+      case 'ArrowDown':  case 's': case 'S': e.preventDefault(); softDrop();    break;
+      case 'ArrowUp':    case 'w': case 'W': e.preventDefault(); rotateCur();   break;
+      case ' ':                              e.preventDefault(); hardDrop();    break;
     }
   }
 
-  function handleKeyUp(e) {
-    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') player.ducking = false;
+  // ════════════════════════════════════════════════════════════
+  // TOUCH CONTROLS  tap=rotate  swipe←→=move  swipe↓=hard drop
+  // ════════════════════════════════════════════════════════════
+
+  function onTouchStart(e) {
+    e.preventDefault();
+    touchX0 = e.touches[0].clientX;
+    touchY0 = e.touches[0].clientY;
+  }
+
+  function onTouchEnd(e) {
+    e.preventDefault();
+    if (gameOverFlag) { startGame(); return; }
+    if (!gameActive)  return;
+    var dx  = e.changedTouches[0].clientX - touchX0;
+    var dy  = e.changedTouches[0].clientY - touchY0;
+    var adx = Math.abs(dx), ady = Math.abs(dy);
+    if (adx < 20 && ady < 20)  { rotateCur(); }
+    else if (adx > ady)        { shift(dx > 0 ? 1 : -1); }
+    else if (dy > 0)           { hardDrop(); }
+    else                       { rotateCur(); }
   }
 
   // ════════════════════════════════════════════════════════════
@@ -181,51 +148,65 @@
     var wrap = document.createElement('div');
     wrap.innerHTML =
       '<div id="game-overlay" class="game-overlay game-overlay--hidden"' +
-      ' role="dialog" aria-modal="true" aria-label="ASCII Runner Game">' +
-        '<div class="game-window">' +
+      ' role="dialog" aria-modal="true" aria-label="Tetris">' +
+        '<div id="game-window" class="game-window game-window--tetris">' +
           '<div class="game-header">' +
             '<span>ryanjadhav@home:~$ ./play</span>' +
             '<button class="game-close" id="game-close-btn" aria-label="Close game">ESC</button>' +
           '</div>' +
-          '<pre id="game-canvas" class="game-canvas"></pre>' +
+          '<div class="tetris-wrap">' +
+            '<canvas id="game-canvas"></canvas>' +
+          '</div>' +
           '<div id="game-over-screen" class="game-over-screen game-over--hidden">' +
             '<p class="game-over-title">GAME  OVER</p>' +
             '<p class="game-over-score" id="game-over-score"></p>' +
             '<p class="game-over-hint">[R] / tap &nbsp;restart &nbsp;&nbsp; [ESC] exit</p>' +
           '</div>' +
-          '<div id="game-touch-hint" class="game-touch-hint">tap to jump &nbsp;·&nbsp; hold bottom to duck</div>' +
+          '<div id="game-touch-hint" class="game-touch-hint">' +
+            'tap rotate &nbsp;·&nbsp; swipe ←→ move &nbsp;·&nbsp; swipe ↓ drop' +
+          '</div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(wrap.firstElementChild);
 
     overlay         = document.getElementById('game-overlay');
-    canvas          = document.getElementById('game-canvas');
+    gameWindow      = document.getElementById('game-window');
+    gameCanvas      = document.getElementById('game-canvas');
+    ctx             = gameCanvas.getContext('2d');
     gameOverScreen  = document.getElementById('game-over-screen');
     gameOverScoreEl = document.getElementById('game-over-score');
     document.getElementById('game-close-btn').addEventListener('click', closeGame);
+
+    gameCanvas.width  = CW;
+    gameCanvas.height = CH;
+    scaleCanvas();
+  }
+
+  function scaleCanvas() {
+    var available = Math.min(window.innerWidth, 600) - 52; // 24px padding × 2 + 2px border + 2px gap
+    var scale     = Math.min(1, available / CW);
+    gameCanvas.style.width  = Math.round(CW * scale) + 'px';
+    gameCanvas.style.height = Math.round(CH * scale) + 'px';
   }
 
   function openGame() {
     if (!overlay) buildOverlay();
     overlay.classList.remove('game-overlay--hidden');
-    document.addEventListener('keyup', handleKeyUp);
     if (isTouchDevice) {
-      overlay.addEventListener('touchstart', handleTouch, { passive: false });
-      overlay.addEventListener('touchend', handleTouchEnd);
+      gameWindow.addEventListener('touchstart', onTouchStart, { passive: false });
+      gameWindow.addEventListener('touchend',   onTouchEnd,   { passive: false });
     }
     startGame();
   }
 
   function closeGame() {
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    gameActive   = false;
-    gameOverFlag = false;
-    if (overlay) {
-      overlay.classList.add('game-overlay--hidden');
-      overlay.removeEventListener('touchstart', handleTouch);
-      overlay.removeEventListener('touchend', handleTouchEnd);
+    gameActive = false; gameOverFlag = false;
+    if (overlay)     overlay.classList.add('game-overlay--hidden');
+    if (gameWindow) {
+      gameWindow.removeEventListener('touchstart', onTouchStart);
+      gameWindow.removeEventListener('touchend',   onTouchEnd);
     }
-    document.removeEventListener('keyup', handleKeyUp);
     clearBuffer();
   }
 
@@ -234,205 +215,230 @@
   // ════════════════════════════════════════════════════════════
 
   function startGame() {
-    player = {
-      y:         STANDING_Y,
-      vy:        0,
-      ducking:   false,
-      frame:     0,
-      frameTick: 0,
-    };
-    obstacles    = [];
+    board        = [];
+    for (var i = 0; i < ROWS; i++) board.push(new Array(COLS).fill(0));
     score        = 0;
-    speed        = INITIAL_SPEED;
+    linesCleared = 0;
+    level        = 1;
+    cur          = spawnPiece();
+    nxt          = spawnPiece();
     gameActive   = true;
     gameOverFlag = false;
+    dropInterval = levelInterval();
+    lastDrop     = 0;
     gameOverScreen.classList.add('game-over--hidden');
-    lastTime = 0;
-    acc      = 0;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
   }
 
-  function restartGame() { startGame(); }
-
-  function endGame() {
-    gameActive   = false;
-    gameOverFlag = true;
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    gameOverScoreEl.textContent = 'score: ' + fmtScore(score);
-    gameOverScreen.classList.remove('game-over--hidden');
+  function spawnPiece() {
+    var t     = PIECES[Math.floor(Math.random() * PIECES.length)];
+    var shape = t.s.map(function (r) { return r.slice(); });
+    return { shape: shape, color: t.c, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
   }
 
+  function levelInterval() { return Math.max(80, 800 - (level - 1) * 70); }
+
   // ════════════════════════════════════════════════════════════
-  // GAME LOOP (fixed-timestep accumulator)
+  // GAME LOOP
   // ════════════════════════════════════════════════════════════
 
   function loop(ts) {
     if (!gameActive) return;
-    if (!lastTime) lastTime = ts;
-    var dt = Math.min(ts - lastTime, 100);
-    lastTime = ts;
-    acc += dt;
-    while (acc >= TICK_MS) {
-      tick();
-      acc -= TICK_MS;
-      if (!gameActive) break;
+    if (!lastDrop) lastDrop = ts;
+    if (ts - lastDrop >= dropInterval) {
+      lastDrop = ts;
+      if (!drop()) lock();
     }
-    if (gameActive) { render(); rafId = requestAnimationFrame(loop); }
+    render();
+    if (gameActive) rafId = requestAnimationFrame(loop);
   }
 
   // ════════════════════════════════════════════════════════════
   // PHYSICS & LOGIC
   // ════════════════════════════════════════════════════════════
 
-  function tick() {
-    // Player physics
-    player.vy += GRAVITY;
-    player.y  += player.vy;
-    if (player.y >= STANDING_Y) { player.y = STANDING_Y; player.vy = 0; }
-
-    // Speed ramp
-    speed += SPEED_RAMP;
-
-    // Advance & cull obstacles
-    for (var i = 0; i < obstacles.length; i++) obstacles[i].x -= speed;
-    obstacles = obstacles.filter(function (o) { return o.x + OBS_W > 0; });
-
-    // Spawn
-    spawnMaybe();
-
-    // Collision
-    if (collides()) { endGame(); return; }
-
-    // Score counter + run animation
-    score++;
-    if (++player.frameTick >= 4) { player.frameTick = 0; player.frame = (player.frame + 1) % 4; }
+  function fits(shape, px, py) {
+    for (var r = 0; r < shape.length; r++) {
+      for (var c = 0; c < shape[r].length; c++) {
+        if (!shape[r][c]) continue;
+        var nx = px + c, ny = py + r;
+        if (nx < 0 || nx >= COLS || ny >= ROWS) return false;
+        if (ny >= 0 && board[ny][nx])           return false;
+      }
+    }
+    return true;
   }
 
-  function jump() {
-    if (player.vy === 0 && player.y >= STANDING_Y - 0.5) {
-      player.vy = JUMP_VEL;
-      player.ducking = false;
+  function drop()     { if (fits(cur.shape, cur.x, cur.y + 1)) { cur.y++; return true; } return false; }
+  function shift(d)   { if (fits(cur.shape, cur.x + d, cur.y)) cur.x += d; }
+  function softDrop() { if (!drop()) lock(); else score += 1; }
+
+  function hardDrop() {
+    var n = 0;
+    while (fits(cur.shape, cur.x, cur.y + 1)) { cur.y++; n++; }
+    score += n * 2;
+    lock();
+  }
+
+  function rotateCur() {
+    var rot   = rotateShape(cur.shape);
+    var kicks = [0, -1, 1, -2, 2];
+    for (var i = 0; i < kicks.length; i++) {
+      if (fits(rot, cur.x + kicks[i], cur.y)) { cur.shape = rot; cur.x += kicks[i]; return; }
     }
   }
 
-  function spawnMaybe() {
-    if (obstacles.length > 0 &&
-        obstacles[obstacles.length - 1].x > COLS - MIN_OBS_GAP) return;
-
-    var rate = Math.min(0.012 + score * 0.000008, 0.025);
-    if (Math.random() > rate) return;
-
-    var types = score > 300
-      ? [OBS_TALL, OBS_TALL, OBS_SHORT, OBS_BIRD]
-      : [OBS_TALL, OBS_TALL, OBS_SHORT];
-    var spr = types[Math.floor(Math.random() * types.length)];
-    var isBird = spr === OBS_BIRD;
-
-    obstacles.push({
-      sprite:    spr,
-      x:         COLS,
-      // Bird at row 7 (player head-height): must duck or jump high to dodge
-      // Ground obstacles: base flush with ground
-      rowOffset: isBird ? STANDING_Y : GROUND_ROW - spr.length + 1,
-    });
+  function rotateShape(s) {
+    var R = s.length, C = s[0].length, out = [];
+    for (var c = 0; c < C; c++) {
+      var row = [];
+      for (var r = R - 1; r >= 0; r--) row.push(s[r][c]);
+      out.push(row);
+    }
+    return out;
   }
 
-  function collides() {
-    // Player hitbox: center column only (PLAYER_COL+2) for leniency
-    var pCol = PLAYER_COL + 2;
-    var pTop, pBot;
-    if (player.ducking) {
-      // Duck sprite renders at GROUND_ROW (1 row)
-      pTop = GROUND_ROW;
-      pBot = GROUND_ROW;
-    } else {
-      pTop = Math.floor(player.y);
-      pBot = pTop + PLAYER_H_STAND - 1;
+  function lock() {
+    for (var r = 0; r < cur.shape.length; r++) {
+      for (var c = 0; c < cur.shape[r].length; c++) {
+        if (!cur.shape[r][c]) continue;
+        var ny = cur.y + r, nx = cur.x + c;
+        if (ny < 0) { endGame(); return; }
+        board[ny][nx] = cur.color;
+      }
     }
+    sweepLines();
+    cur = nxt;
+    nxt = spawnPiece();
+    dropInterval = levelInterval();
+    if (!fits(cur.shape, cur.x, cur.y)) endGame();
+  }
 
-    for (var i = 0; i < obstacles.length; i++) {
-      var o  = obstacles[i];
-      var ox = Math.floor(o.x);
-      var oTop = o.rowOffset;
-      var oBot = o.rowOffset + o.sprite.length - 1;
-      // Horizontal: player center within obstacle's 5 chars
-      if (pCol >= ox && pCol <= ox + OBS_W - 1 && pTop <= oBot && pBot >= oTop) return true;
+  function sweepLines() {
+    var cleared = 0;
+    for (var r = ROWS - 1; r >= 0; r--) {
+      if (board[r].every(function (c) { return c !== 0; })) {
+        board.splice(r, 1);
+        board.unshift(new Array(COLS).fill(0));
+        cleared++; r++;
+      }
     }
-    return false;
+    if (!cleared) return;
+    score        += [0, 100, 300, 500, 800][Math.min(cleared, 4)] * level;
+    linesCleared += cleared;
+    level         = Math.floor(linesCleared / 10) + 1;
+  }
+
+  function endGame() {
+    gameActive = false; gameOverFlag = true;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    gameOverScoreEl.textContent = 'score: ' + score;
+    gameOverScreen.classList.remove('game-over--hidden');
   }
 
   // ════════════════════════════════════════════════════════════
   // RENDER
   // ════════════════════════════════════════════════════════════
 
-  function render() {
-    // Build blank char grid
-    var g = [];
-    for (var r = 0; r < ROWS; r++) {
-      var row = [];
-      for (var c = 0; c < COLS; c++) row.push(' ');
-      g.push(row);
-    }
-
-    // Ground line (U+2500 box-drawing horizontal)
-    for (var c = 0; c < COLS; c++) g[GROUND_ROW][c] = '\u2500';
-
-    // Score — top-right corner
-    var sc = 'SCORE: ' + fmtScore(score);
-    for (var i = 0; i < sc.length; i++) {
-      var col = COLS - sc.length - 1 + i;
-      if (col >= 0) g[0][col] = sc[i];
-    }
-
-    // Obstacles
-    for (var oi = 0; oi < obstacles.length; oi++) {
-      var o  = obstacles[oi];
-      var ox = Math.floor(o.x);
-      for (var sr = 0; sr < o.sprite.length; sr++) {
-        var row = o.rowOffset + sr;
-        if (row < 0 || row >= ROWS) continue;
-        var line = o.sprite[sr];
-        for (var sc2 = 0; sc2 < line.length; sc2++) {
-          var col2 = ox + sc2;
-          if (col2 >= 0 && col2 < COLS) g[row][col2] = line[sc2];
-        }
-      }
-    }
-
-    // Player
-    var sprite, py;
-    if (player.ducking) {
-      sprite = PLAYER_DUCK_SPR;
-      py     = GROUND_ROW;
-    } else if (player.y < STANDING_Y - 0.5) {
-      sprite = PLAYER_JUMP_SPR;
-      py     = Math.floor(player.y);
-    } else {
-      sprite = PLAYER_RUN[player.frame];
-      py     = Math.floor(player.y);
-    }
-    for (var pr = 0; pr < sprite.length; pr++) {
-      var prow = py + pr;
-      if (prow < 0 || prow >= ROWS) continue;
-      var pline = sprite[pr];
-      for (var pc = 0; pc < pline.length; pc++) {
-        var pcol = PLAYER_COL + pc;
-        if (pcol < COLS) g[prow][pcol] = pline[pc];
-      }
-    }
-
-    canvas.textContent = g.map(function (row) { return row.join(''); }).join('\n');
+  function ghostY() {
+    var gy = cur.y;
+    while (fits(cur.shape, cur.x, gy + 1)) gy++;
+    return gy;
   }
 
-  // ── Utility ───────────────────────────────────────────────────
-  function fmtScore(n) { return String(n).padStart(5, '0'); }
+  function render() {
+    ctx.fillStyle = C_BG;
+    ctx.fillRect(0, 0, CW, CH);
+
+    // Grid lines
+    ctx.strokeStyle = C_GRID;
+    ctx.lineWidth   = 0.5;
+    for (var c = 0; c <= COLS; c++) {
+      ctx.beginPath(); ctx.moveTo(c * CELL, 0); ctx.lineTo(c * CELL, BH); ctx.stroke();
+    }
+    for (var r = 0; r <= ROWS; r++) {
+      ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(BW, r * CELL); ctx.stroke();
+    }
+
+    // Locked cells
+    for (var row = 0; row < ROWS; row++) {
+      for (var col = 0; col < COLS; col++) {
+        if (board[row][col]) drawCell(col, row, board[row][col], 1);
+      }
+    }
+
+    // Ghost piece
+    var gy = ghostY();
+    if (gy !== cur.y) drawPiece(cur.shape, cur.x, gy, cur.color, 0.18);
+
+    // Current piece
+    drawPiece(cur.shape, cur.x, cur.y, cur.color, 1);
+
+    // Sidebar divider
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.moveTo(BW + 0.5, 0); ctx.lineTo(BW + 0.5, CH); ctx.stroke();
+
+    drawSidebar(BW + 10);
+  }
+
+  function drawCell(col, row, color, alpha) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle   = color;
+    ctx.fillRect(col * CELL + 1, row * CELL + 1, CELL - 2, CELL - 2);
+    // Top highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(col * CELL + 1, row * CELL + 1, CELL - 2, 3);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawPiece(shape, px, py, color, alpha) {
+    for (var r = 0; r < shape.length; r++) {
+      for (var c = 0; c < shape[r].length; c++) {
+        if (shape[r][c]) drawCell(px + c, py + r, color, alpha);
+      }
+    }
+  }
+
+  function drawSidebar(x) {
+    var PC = 18; // preview cell size
+    ctx.textBaseline = 'top';
+
+    function label(t, y) {
+      ctx.fillStyle = C_MUTED;
+      ctx.font      = '10px JetBrains Mono, monospace';
+      ctx.fillText(t, x, y);
+    }
+    function value(t, y) {
+      ctx.fillStyle = C_TEXT;
+      ctx.font      = 'bold 13px JetBrains Mono, monospace';
+      ctx.fillText(String(t), x, y);
+    }
+
+    label('SCORE',  16); value(score,        30);
+    label('LEVEL',  62); value(level,         76);
+    label('LINES', 108); value(linesCleared, 122);
+    label('NEXT',  158);
+
+    var ny = 174;
+    var ns = nxt.shape;
+    for (var r = 0; r < ns.length; r++) {
+      for (var c = 0; c < ns[r].length; c++) {
+        if (!ns[r][c]) continue;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle   = nxt.color;
+        ctx.fillRect(x + c * PC + 1, ny + r * PC + 1, PC - 2, PC - 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillRect(x + c * PC + 1, ny + r * PC + 1, PC - 2, 3);
+      }
+    }
+  }
 
   // ── Bootstrap ─────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', handleGlobalKey);
 
-    // Mobile: tap the nav logo to open the game
     if (isTouchDevice) {
       var logo = document.querySelector('.nav-logo');
       if (logo) {

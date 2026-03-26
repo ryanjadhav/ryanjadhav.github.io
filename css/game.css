@@ -82,17 +82,20 @@
   min-width: 56px;
 }
 
-.game-canvas {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: clamp(11px, 1.8vw, 14px);
-  line-height: 1.5;
-  color: var(--text);
+/* ─── Tetris game window ──────────────────────────────────────── */
+.game-window--tetris {
+  width: auto;
+}
+
+.tetris-wrap {
   padding: 20px 24px;
-  white-space: pre;
-  overflow: hidden;
-  user-select: none;
-  tab-size: 1;
+  display: flex;
+  justify-content: center;
+}
+
+#game-canvas {
+  display: block;
+  image-rendering: pixelated;
 }
 
 .game-over-screen {
