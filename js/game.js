@@ -251,7 +251,7 @@
       lastDrop = ts;
       if (!drop()) lock();
     }
-    render();
+    render(ts);
     if (gameActive) rafId = requestAnimationFrame(loop);
   }
 
@@ -353,7 +353,10 @@
     return gy;
   }
 
-  function render() {
+  function render(ts) {
+    // Interpolate piece position between gravity ticks for smooth downward motion
+    var progress = Math.min((ts - lastDrop) / dropInterval, 1);
+    var renderY  = cur.y + progress;
     ctx.fillStyle = C_BG;
     ctx.fillRect(0, 0, CW, CH);
 
@@ -378,8 +381,8 @@
     var gy = ghostY();
     if (gy !== cur.y) drawPiece(cur.shape, cur.x, gy, cur.color, 0.18);
 
-    // Current piece
-    drawPiece(cur.shape, cur.x, cur.y, cur.color, 1);
+    // Current piece (drawn at interpolated position for smooth motion)
+    drawPiece(cur.shape, cur.x, renderY, cur.color, 1);
 
     // Hard-drop animations (streak + lock flash)
     renderAnimations();
