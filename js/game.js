@@ -38,7 +38,7 @@
   var gameActive   = false;
   var gameOverFlag = false;
   var rafId        = null;
-  var board, cur, nxt, score, linesCleared, level, lastDrop, dropInterval;
+  var board, cur, nxt, score, linesCleared, level, lastDrop, dropInterval, animations;
 
   // ── DOM refs ──────────────────────────────────────────────────
   var overlay, gameWindow, gameCanvas, ctx, gameOverScreen, gameOverScoreEl;
@@ -226,6 +226,7 @@
     gameOverFlag = false;
     dropInterval = levelInterval();
     lastDrop     = 0;
+    animations   = [];
     gameOverScreen.classList.add('game-over--hidden');
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
@@ -250,7 +251,7 @@
       lastDrop = ts;
       if (!drop()) lock();
     }
-    render();
+    render(ts);
     if (gameActive) rafId = requestAnimationFrame(loop);
   }
 
@@ -275,9 +276,11 @@
   function softDrop() { if (!drop()) lock(); else score += 1; }
 
   function hardDrop() {
+    var fromY = cur.y;
     var n = 0;
     while (fits(cur.shape, cur.x, cur.y + 1)) { cur.y++; n++; }
     score += n * 2;
+    if (n > 0) animations.push({ type: 'streak', shape: cur.shape.map(function (r) { return r.slice(); }), x: cur.x, fromY: fromY, toY: cur.y, color: cur.color, t0: performance.now(), dur: 160 });
     lock();
   }
 
@@ -300,14 +303,17 @@
   }
 
   function lock() {
+    var locked = [];
     for (var r = 0; r < cur.shape.length; r++) {
       for (var c = 0; c < cur.shape[r].length; c++) {
         if (!cur.shape[r][c]) continue;
         var ny = cur.y + r, nx = cur.x + c;
         if (ny < 0) { endGame(); return; }
         board[ny][nx] = cur.color;
+        locked.push({ col: nx, row: ny });
       }
     }
+    animations.push({ type: 'flash', cells: locked, t0: performance.now(), dur: 220 });
     sweepLines();
     cur = nxt;
     nxt = spawnPiece();
@@ -347,7 +353,10 @@
     return gy;
   }
 
-  function render() {
+  function render(ts) {
+    // Interpolate piece position between gravity ticks for smooth downward motion
+    var progress = Math.min((ts - lastDrop) / dropInterval, 1);
+    var renderY  = cur.y + progress;
     ctx.fillStyle = C_BG;
     ctx.fillRect(0, 0, CW, CH);
 
@@ -372,8 +381,11 @@
     var gy = ghostY();
     if (gy !== cur.y) drawPiece(cur.shape, cur.x, gy, cur.color, 0.18);
 
-    // Current piece
-    drawPiece(cur.shape, cur.x, cur.y, cur.color, 1);
+    // Current piece (drawn at interpolated position for smooth motion)
+    drawPiece(cur.shape, cur.x, renderY, cur.color, 1);
+
+    // Hard-drop animations (streak + lock flash)
+    renderAnimations();
 
     // Sidebar divider
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
@@ -391,6 +403,41 @@
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.fillRect(col * CELL + 1, row * CELL + 1, CELL - 2, 3);
     ctx.globalAlpha = 1;
+  }
+
+  function renderAnimations() {
+    var now   = performance.now();
+    var alive = [];
+    for (var i = 0; i < animations.length; i++) {
+      var a = animations[i];
+      var t = (now - a.t0) / a.dur;
+      if (t >= 1) continue;
+      alive.push(a);
+      if (a.type === 'streak') {
+        // Thin vertical bars along the drop path, fading out
+        ctx.globalAlpha = (1 - t) * 0.55;
+        ctx.fillStyle   = a.color;
+        for (var r = 0; r < a.shape.length; r++) {
+          for (var c = 0; c < a.shape[r].length; c++) {
+            if (!a.shape[r][c]) continue;
+            var cx = (a.x + c) * CELL + Math.floor(CELL / 2) - 1;
+            var y1 = (a.fromY + r) * CELL;
+            var y2 = (a.toY   + r) * CELL;
+            if (y2 > y1) ctx.fillRect(cx, y1, 2, y2 - y1);
+          }
+        }
+        ctx.globalAlpha = 1;
+      } else {
+        // White flash on locked cells, fading out
+        ctx.globalAlpha = (1 - t) * 0.8;
+        ctx.fillStyle   = '#ffffff';
+        for (var j = 0; j < a.cells.length; j++) {
+          ctx.fillRect(a.cells[j].col * CELL + 1, a.cells[j].row * CELL + 1, CELL - 2, CELL - 2);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+    animations = alive;
   }
 
   function drawPiece(shape, px, py, color, alpha) {
