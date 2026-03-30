@@ -1,7 +1,7 @@
 # ryanjadhav.github.io
 
-### Personal website for [Ryan Jadhav](https://ryanjadhav.com)
----
+Personal website for [Ryan Jadhav](https://ryanjadhav.com)
+
 
 ## Overview
 
