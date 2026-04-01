@@ -2,8 +2,9 @@
   'use strict';
 
   // ── Constants ─────────────────────────────────────────────────
-  var SECRET_WORD = 'play';
-  var BUFFER_MS   = 2000;
+  var SECRET_WORD        = 'play';
+  var BUFFER_MS          = 2000;
+  var LEADERBOARD_ENABLED = true;  // set false to disable Firebase entirely
 
   // Board geometry
   var COLS = 10;
@@ -38,10 +39,14 @@
   var gameActive   = false;
   var gameOverFlag = false;
   var rafId        = null;
+  var playerName   = '???';
+  var currentPanel = null; // 'name-entry' | 'score-entry' | 'leaderboard-view' | null
   var board, cur, nxt, score, linesCleared, level, lastDrop, dropInterval, animations;
 
   // ── DOM refs ──────────────────────────────────────────────────
-  var overlay, gameWindow, gameCanvas, ctx, gameOverScreen, gameOverScoreEl;
+  var overlay, gameWindow, gameCanvas, ctx;
+  var initialsInput, playBtnEl, gameOverScoreEl, leaderboardListEl, quitSaveBtnEl;
+  var PANELS = ['name-entry', 'score-entry', 'leaderboard-view'];
 
   // ── Touch support ─────────────────────────────────────────────
   var isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -105,15 +110,21 @@
   // ════════════════════════════════════════════════════════════
 
   function handleGameKey(e) {
-    if (e.key === 'Escape') { closeGame(); return; }
-    if (gameOverFlag) { if (e.key === 'r' || e.key === 'R') startGame(); return; }
+    if (e.key === 'Escape') {
+      if (gameActive) quitAndSave(); else closeGame();
+      return;
+    }
+    if (gameOverFlag) {
+      if ((e.key === 'r' || e.key === 'R') && currentPanel === 'leaderboard-view') startGame();
+      return;
+    }
     if (!gameActive) return;
     switch (e.key) {
-      case 'ArrowLeft':  case 'a': case 'A': e.preventDefault(); shift(-1);     break;
-      case 'ArrowRight': case 'd': case 'D': e.preventDefault(); shift(1);      break;
-      case 'ArrowDown':  case 's': case 'S': e.preventDefault(); softDrop();    break;
-      case 'ArrowUp':    case 'w': case 'W': e.preventDefault(); rotateCur();   break;
-      case ' ':                              e.preventDefault(); hardDrop();    break;
+      case 'ArrowLeft':  case 'a': case 'A': e.preventDefault(); shift(-1);   break;
+      case 'ArrowRight': case 'd': case 'D': e.preventDefault(); shift(1);    break;
+      case 'ArrowDown':  case 's': case 'S': e.preventDefault(); softDrop();  break;
+      case 'ArrowUp':    case 'w': case 'W': e.preventDefault(); rotateCur(); break;
+      case ' ':                              e.preventDefault(); hardDrop();  break;
     }
   }
 
@@ -129,8 +140,11 @@
 
   function onTouchEnd(e) {
     e.preventDefault();
-    if (gameOverFlag) { startGame(); return; }
-    if (!gameActive)  return;
+    if (gameOverFlag) {
+      if (currentPanel === 'leaderboard-view') startGame();
+      return;
+    }
+    if (!gameActive) return;
     var dx  = e.changedTouches[0].clientX - touchX0;
     var dy  = e.changedTouches[0].clientY - touchY0;
     var adx = Math.abs(dx), ady = Math.abs(dy);
@@ -138,6 +152,23 @@
     else if (adx > ady)        { shift(dx > 0 ? 1 : -1); }
     else if (dy > 0)           { hardDrop(); }
     else                       { rotateCur(); }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // PANEL HELPERS
+  // ════════════════════════════════════════════════════════════
+
+  function showPanel(id) {
+    currentPanel = id;
+    PANELS.forEach(function (p) {
+      document.getElementById(p).classList.toggle('game-panel--hidden', p !== id);
+    });
+    document.getElementById('game-panel-overlay').classList.remove('game-over--hidden');
+  }
+
+  function hidePanel() {
+    currentPanel = null;
+    document.getElementById('game-panel-overlay').classList.add('game-over--hidden');
   }
 
   // ════════════════════════════════════════════════════════════
@@ -152,30 +183,57 @@
         '<div id="game-window" class="game-window game-window--tetris">' +
           '<div class="game-header">' +
             '<span>ryanjadhav@home:~$ ./play</span>' +
-            '<button class="game-close" id="game-close-btn" aria-label="Close game">ESC</button>' +
+            '<div class="header-btns">' +
+              '<button id="quit-save-btn" class="quit-save-btn" aria-label="Save and quit">SAVE &amp; QUIT</button>' +
+              '<button id="game-close-btn" class="game-close" aria-label="Close game">ESC</button>' +
+            '</div>' +
           '</div>' +
           '<div class="tetris-wrap">' +
             '<canvas id="game-canvas"></canvas>' +
           '</div>' +
-          '<div id="game-over-screen" class="game-over-screen game-over--hidden">' +
-            '<p class="game-over-title">GAME  OVER</p>' +
-            '<p class="game-over-score" id="game-over-score"></p>' +
-            '<p class="game-over-hint">[R] / tap &nbsp;restart &nbsp;&nbsp; [ESC] exit</p>' +
+          '<div id="game-panel-overlay" class="game-panel-overlay game-over--hidden">' +
+            '<div id="name-entry" class="game-panel">' +
+              '<p class="panel-title">TETRIS</p>' +
+              '<p class="panel-label">ENTER INITIALS</p>' +
+              '<input id="initials-input" class="initials-input" type="text" maxlength="3"' +
+              ' placeholder="AAA" autocomplete="off" spellcheck="false" />' +
+              '<button id="play-btn" class="play-btn">&#9654; PLAY</button>' +
+            '</div>' +
+            '<div id="score-entry" class="game-panel game-panel--hidden">' +
+              '<p class="panel-title">GAME  OVER</p>' +
+              '<p id="game-over-score" class="panel-score"></p>' +
+              '<p class="panel-label">saving\u2026</p>' +
+            '</div>' +
+            '<div id="leaderboard-view" class="game-panel game-panel--hidden">' +
+              '<p class="panel-title">LEADERBOARD</p>' +
+              '<ol id="leaderboard-list" class="leaderboard-list"></ol>' +
+              '<p class="panel-hint">[R] / tap &nbsp;restart &nbsp;&nbsp; [ESC] exit</p>' +
+            '</div>' +
           '</div>' +
           '<div id="game-touch-hint" class="game-touch-hint">' +
-            'tap rotate &nbsp;·&nbsp; swipe ←→ move &nbsp;·&nbsp; swipe ↓ drop' +
+            'tap rotate &nbsp;\xb7&nbsp; swipe \u2190\u2192 move &nbsp;\xb7&nbsp; swipe \u2193 drop' +
           '</div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(wrap.firstElementChild);
 
-    overlay         = document.getElementById('game-overlay');
-    gameWindow      = document.getElementById('game-window');
-    gameCanvas      = document.getElementById('game-canvas');
-    ctx             = gameCanvas.getContext('2d');
-    gameOverScreen  = document.getElementById('game-over-screen');
-    gameOverScoreEl = document.getElementById('game-over-score');
-    document.getElementById('game-close-btn').addEventListener('click', closeGame);
+    overlay          = document.getElementById('game-overlay');
+    gameWindow       = document.getElementById('game-window');
+    gameCanvas       = document.getElementById('game-canvas');
+    ctx              = gameCanvas.getContext('2d');
+    initialsInput    = document.getElementById('initials-input');
+    playBtnEl        = document.getElementById('play-btn');
+    gameOverScoreEl  = document.getElementById('game-over-score');
+    leaderboardListEl= document.getElementById('leaderboard-list');
+    quitSaveBtnEl    = document.getElementById('quit-save-btn');
+
+    document.getElementById('game-close-btn').addEventListener('click', onCloseClick);
+    quitSaveBtnEl.addEventListener('click', quitAndSave);
+    playBtnEl.addEventListener('click', onPlayClick);
+    initialsInput.addEventListener('keydown', onInitialsKey);
+    initialsInput.addEventListener('input', function () {
+      initialsInput.value = initialsInput.value.toUpperCase();
+    });
 
     gameCanvas.width  = CW;
     gameCanvas.height = CH;
@@ -183,10 +241,25 @@
   }
 
   function scaleCanvas() {
-    var available = Math.min(window.innerWidth, 600) - 52; // 24px padding × 2 + 2px border + 2px gap
+    var available = Math.min(window.innerWidth, 600) - 52;
     var scale     = Math.min(1, available / CW);
     gameCanvas.style.width  = Math.round(CW * scale) + 'px';
     gameCanvas.style.height = Math.round(CH * scale) + 'px';
+  }
+
+  function onCloseClick() {
+    if (gameActive) quitAndSave(); else closeGame();
+  }
+
+  function onPlayClick() {
+    playerName = (initialsInput.value.trim().toUpperCase() || '???').slice(0, 3);
+    hidePanel();
+    startGame();
+  }
+
+  function onInitialsKey(e) {
+    if (e.key === 'Enter')  { onPlayClick(); }
+    if (e.key === 'Escape') { closeGame(); }
   }
 
   function openGame() {
@@ -196,7 +269,9 @@
       gameWindow.addEventListener('touchstart', onTouchStart, { passive: false });
       gameWindow.addEventListener('touchend',   onTouchEnd,   { passive: false });
     }
-    startGame();
+    initialsInput.value = '';
+    showPanel('name-entry');
+    setTimeout(function () { initialsInput.focus(); }, 150);
   }
 
   function closeGame() {
@@ -227,7 +302,7 @@
     dropInterval = levelInterval();
     lastDrop     = 0;
     animations   = [];
-    gameOverScreen.classList.add('game-over--hidden');
+    hidePanel();
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
   }
@@ -339,8 +414,67 @@
   function endGame() {
     gameActive = false; gameOverFlag = true;
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    gameOverScoreEl.textContent = 'score: ' + score;
-    gameOverScreen.classList.remove('game-over--hidden');
+    gameOverScoreEl.textContent = 'score: ' + score + '  \xb7  level: ' + level;
+    showPanel('score-entry');
+    saveScore().then(showLeaderboard);
+  }
+
+  function quitAndSave() {
+    if (!gameActive) return;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    gameActive = false; gameOverFlag = true;
+    gameOverScoreEl.textContent = 'score: ' + score + '  \xb7  level: ' + level;
+    showPanel('score-entry');
+    saveScore().then(showLeaderboard);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // FIREBASE LEADERBOARD
+  // ════════════════════════════════════════════════════════════
+
+  function saveScore() {
+    if (!LEADERBOARD_ENABLED || typeof window.db === 'undefined') return Promise.resolve();
+    return window.db.collection('tetris_scores').add({
+      name:  playerName,
+      score: score,
+      level: level,
+      date:  firebase.firestore.FieldValue.serverTimestamp(),
+    }).catch(function () {});
+  }
+
+  function showLeaderboard() {
+    showPanel('leaderboard-view');
+    leaderboardListEl.innerHTML = '<li class="lb-row lb-loading">loading\u2026</li>';
+
+    if (!LEADERBOARD_ENABLED || typeof window.db === 'undefined') {
+      leaderboardListEl.innerHTML = '<li class="lb-row lb-loading">leaderboard unavailable</li>';
+      return;
+    }
+
+    window.db.collection('tetris_scores').orderBy('score', 'desc').limit(10).get()
+      .then(function (snap) {
+        var i = 0, html = '';
+        snap.forEach(function (doc) {
+          i++;
+          var d    = doc.data();
+          var date = d.date ? new Date(d.date.seconds * 1000).toLocaleDateString() : '';
+          html +=
+            '<li class="lb-row">' +
+              '<span class="lb-rank">' + i + '</span>' +
+              '<span class="lb-name">' + escHtml(d.name) + '</span>' +
+              '<span class="lb-score">' + d.score + '</span>' +
+              '<span class="lb-meta">lvl\u00a0' + d.level + ' \xb7 ' + date + '</span>' +
+            '</li>';
+        });
+        leaderboardListEl.innerHTML = html || '<li class="lb-row lb-loading">no scores yet</li>';
+      })
+      .catch(function () {
+        leaderboardListEl.innerHTML = '<li class="lb-row lb-loading">could not load scores</li>';
+      });
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   // ════════════════════════════════════════════════════════════
@@ -354,9 +488,9 @@
   }
 
   function render(ts) {
-    // Interpolate piece position between gravity ticks for smooth downward motion
     var progress = Math.min((ts - lastDrop) / dropInterval, 1);
     var renderY  = cur.y + progress;
+
     ctx.fillStyle = C_BG;
     ctx.fillRect(0, 0, CW, CH);
 
@@ -381,10 +515,10 @@
     var gy = ghostY();
     if (gy !== cur.y) drawPiece(cur.shape, cur.x, gy, cur.color, 0.18);
 
-    // Current piece (drawn at interpolated position for smooth motion)
+    // Current piece (interpolated for smooth motion)
     drawPiece(cur.shape, cur.x, renderY, cur.color, 1);
 
-    // Hard-drop animations (streak + lock flash)
+    // Hard-drop animations
     renderAnimations();
 
     // Sidebar divider
@@ -399,7 +533,6 @@
     ctx.globalAlpha = alpha;
     ctx.fillStyle   = color;
     ctx.fillRect(col * CELL + 1, row * CELL + 1, CELL - 2, CELL - 2);
-    // Top highlight
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.fillRect(col * CELL + 1, row * CELL + 1, CELL - 2, 3);
     ctx.globalAlpha = 1;
@@ -414,7 +547,6 @@
       if (t >= 1) continue;
       alive.push(a);
       if (a.type === 'streak') {
-        // Thin vertical bars along the drop path, fading out
         ctx.globalAlpha = (1 - t) * 0.55;
         ctx.fillStyle   = a.color;
         for (var r = 0; r < a.shape.length; r++) {
@@ -428,7 +560,6 @@
         }
         ctx.globalAlpha = 1;
       } else {
-        // White flash on locked cells, fading out
         ctx.globalAlpha = (1 - t) * 0.8;
         ctx.fillStyle   = '#ffffff';
         for (var j = 0; j < a.cells.length; j++) {
@@ -449,7 +580,7 @@
   }
 
   function drawSidebar(x) {
-    var PC = 18; // preview cell size
+    var PC = 18;
     ctx.textBaseline = 'top';
 
     function label(t, y) {

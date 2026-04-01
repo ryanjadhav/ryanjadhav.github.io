@@ -135,6 +135,118 @@
   margin-top: 10px;
 }
 
+/* ─── Header buttons group ───────────────────────────────────────── */
+.header-btns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ─── Save & Quit button (touch only) ────────────────────────────── */
+.quit-save-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.quit-save-btn:hover { color: var(--text); border-color: var(--border-hover); }
+.touch-device .quit-save-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* ─── Panel overlay (replaces game-over-screen) ──────────────────── */
+.game-panel-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--bg-rgb), 0.92);
+  font-family: var(--font-mono);
+  transition: opacity 0.2s ease;
+}
+.game-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.game-panel--hidden { display: none; }
+.panel-title  { font-size: 22px; font-weight: 600; color: var(--accent); letter-spacing: 0.18em; }
+.panel-score  { font-size: 15px; color: var(--text-muted); }
+.panel-label  { font-size: 11px; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; }
+.panel-hint   { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+/* ─── Initials input ─────────────────────────────────────────────── */
+.initials-input {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 500;
+  text-align: center;
+  width: 90px;
+  outline: none;
+  padding: 4px 0;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+.initials-input::placeholder { color: rgba(0, 229, 255, 0.2); letter-spacing: 0.4em; }
+
+/* ─── Play button ────────────────────────────────────────────────── */
+.play-btn {
+  background: none;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 7px 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+  transition: background 0.15s ease;
+}
+.play-btn:hover { background: rgba(0, 229, 255, 0.1); }
+
+/* ─── Leaderboard list ───────────────────────────────────────────── */
+.leaderboard-list {
+  list-style: none;
+  min-width: 260px;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 3px;
+}
+.lb-row:nth-child(1) .lb-rank { color: #ffd700; }
+.lb-row:nth-child(2) .lb-rank { color: #c0c0c0; }
+.lb-row:nth-child(3) .lb-rank { color: #cd7f32; }
+.lb-rank    { min-width: 16px; color: var(--text-muted); font-size: 11px; }
+.lb-name    { flex: 1; font-weight: 600; color: var(--text); }
+.lb-score   { min-width: 44px; text-align: right; color: var(--accent); }
+.lb-meta    { font-size: 10px; color: var(--text-muted); }
+.lb-loading { font-size: 12px; color: var(--text-muted); padding: 8px; }
+
 /* ─── Touch hint bar (shown only on touch devices) ─────────────── */
 .touch-device .game-touch-hint {
   display: block;
